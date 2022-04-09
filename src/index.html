@@ -38,19 +38,29 @@
                         let recordedChunks = [];
                         currentRecorder = new MediaRecorder(media, { mimeType });
                         console.log(media.getTracks());
-                        currentRecorder.addEventListener('dataavailable', async (e) => {
+                        currentRecorder.addEventListener('dataavailable', (e) => {
                             recordedChunks.push(e.data);
 
                             if (currentRecorder.state === 'inactive') {
                                 const blob = new Blob(recordedChunks, { type: mimeType });
 
-                                const response = await fetch('/send_recording', {
-                                    method: 'post',
-                                    body: blob,
+                                const ws = new WebSocket('ws://localhost:5001');
+
+                                ws.addEventListener('open', (e) => {
+                                    ws.send(blob);
                                 });
 
-                                alert(`received: ${await response.text()}`);
-                                setRecordingState('stopped');
+                                ws.addEventListener('message', (e) => {
+                                    const guess = e.data;
+                                    if (guess === '') {
+                                        alert('failed to hear your guess');
+                                    } else {
+                                        alert(`you guessed ${guess}`);
+                                    }
+
+                                    setRecordingState('stopped');
+                                    ws.close();
+                                });
                             }
                         });
                         currentRecorder.start();
