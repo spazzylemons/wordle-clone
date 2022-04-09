@@ -1,4 +1,5 @@
 from flask import Flask, request
+from google.cloud import speech
 
 app = Flask(__name__)
 
@@ -11,9 +12,18 @@ def index():
 
 @app.route('/send_recording', methods=['POST'])
 def send_recording():
-    with open('received.webm', 'wb') as file:
-        file.write(request.data)
-    return 'audio received and saved'
+    client = speech.SpeechClient()
+    audio = speech.RecognitionAudio(content=request.data)
+    config = speech.RecognitionConfig(
+        audio_channel_count=2,
+        language_code='en-US',
+    )
+    response = client.recognize(config=config, audio=audio)
+    print(response)
+    data = []
+    for result in response.results:
+        data.append('"{}"'.format(result.alternatives[0].transcript))
+    return ' '.join(data)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

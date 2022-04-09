@@ -7,10 +7,11 @@
         <h1>Hello world!</h1>
 
         <script>
+            const mimeType = 'audio/webm;codecs=opus';
+
             let recordingState = 'stopped';
 
             let currentRecorder;
-            let recordedChunks;
 
             function setRecordingState(state) {
                 document.getElementById('record-toggle').textContent = ({
@@ -34,24 +35,25 @@
                     case 'stopped': {
                         const media = await navigator.mediaDevices.getUserMedia({ audio: true });
     
-                        recordedChunks = [];
-                        currentRecorder = new MediaRecorder(media);
-                        currentRecorder.addEventListener('dataavailable', (e) => {
+                        let recordedChunks = [];
+                        currentRecorder = new MediaRecorder(media, { mimeType });
+                        console.log(media.getTracks());
+                        currentRecorder.addEventListener('dataavailable', async (e) => {
                             recordedChunks.push(e.data);
 
                             if (currentRecorder.state === 'inactive') {
-                                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-        
-                                const req = new XMLHttpRequest();
-                                req.addEventListener('load', function() {
-                                    alert(`received: '${this.responseText}'`);
-                                    setRecordingState('stopped');
+                                const blob = new Blob(recordedChunks, { type: mimeType });
+
+                                const response = await fetch('/send_recording', {
+                                    method: 'post',
+                                    body: blob,
                                 });
-                                req.open('POST', '/send_recording');
-                                req.send(blob);
+
+                                alert(`received: ${await response.text()}`);
+                                setRecordingState('stopped');
                             }
                         });
-                        currentRecorder.start(1000);
+                        currentRecorder.start();
                         setRecordingState('recording');
 
                         break;

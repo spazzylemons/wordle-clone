@@ -2,4 +2,4 @@
 
 set -e
 
-python src
+GOOGLE_APPLICATION_CREDENTIALS=credentials.json python src
