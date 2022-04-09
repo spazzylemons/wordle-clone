@@ -7,6 +7,19 @@
         <h1>Hello world!</h1>
 
         <script>
+            let recordingState = 'stopped';
+
+            let currentRecorder;
+            let recordedChunks;
+
+            function setRecordingState(state) {
+                document.getElementById('record-toggle').textContent = ({
+                    stopped: 'Start recording',
+                    recording: 'Stop recording',
+                    waiting: 'Waiting...',
+                })[recordingState = state];
+            }
+
             function sendRecording() {
                 const req = new XMLHttpRequest();
                 req.addEventListener('load', function() {
@@ -15,9 +28,49 @@
                 req.open('POST', '/send_recording');
                 req.send(document.getElementById('server-input').textContent);
             }
+
+            async function toggleRecording() {
+                switch (recordingState) {
+                    case 'stopped': {
+                        const media = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+                        recordedChunks = [];
+                        currentRecorder = new MediaRecorder(media);
+                        currentRecorder.addEventListener('dataavailable', (e) => {
+                            recordedChunks.push(e.data);
+
+                            if (currentRecorder.state === 'inactive') {
+                                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        
+                                const req = new XMLHttpRequest();
+                                req.addEventListener('load', function() {
+                                    alert(`received: '${this.responseText}'`);
+                                    setRecordingState('stopped');
+                                });
+                                req.open('POST', '/send_recording');
+                                req.send(blob);
+                            }
+                        });
+                        currentRecorder.start(1000);
+                        setRecordingState('recording');
+
+                        break;
+                    }
+
+                    case 'recording': {
+                        currentRecorder.stop();
+
+                        setRecordingState('waiting');
+                        break;
+                    }
+                }
+            }
         </script>
 
-        <textarea id="server-input">text to send to server</textarea>
-        <button onclick="sendRecording()">Send recording</button>
+        <button id="record-toggle" onclick="toggleRecording()"></button>
+
+        <script>
+            setRecordingState('stopped');
+        </script>
     </body>
 </html>

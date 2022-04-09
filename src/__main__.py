@@ -11,7 +11,9 @@ def index():
 
 @app.route('/send_recording', methods=['POST'])
 def send_recording():
-    return request.data
+    with open('received.webm', 'wb') as file:
+        file.write(request.data)
+    return 'audio received and saved'
 
 if __name__ == '__main__':
     app.run()
